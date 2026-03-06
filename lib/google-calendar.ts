@@ -83,10 +83,12 @@ export async function getAvailableSlots(dateStr: string): Promise<TimeSlot[]> {
   const calendar = getCalendarClient();
   const allSlots = generateBusinessHourSlots(dateStr);
 
-  const timeMin = `${dateStr}T00:00:00Z`;
-  const nextDay = new Date(dateStr);
+  // Use the configured timezone for the query window, not UTC
+  const timeMin = `${dateStr}T00:00:00`;
+  const nextDay = new Date(`${dateStr}T12:00:00Z`);
   nextDay.setDate(nextDay.getDate() + 1);
-  const timeMax = `${nextDay.toISOString().split("T")[0]}T23:59:59Z`;
+  const nextDayStr = nextDay.toISOString().split("T")[0];
+  const timeMax = `${nextDayStr}T00:00:00`;
 
   const freeBusyResponse = await calendar.freebusy.query({
     requestBody: {
@@ -97,8 +99,16 @@ export async function getAvailableSlots(dateStr: string): Promise<TimeSlot[]> {
     },
   });
 
-  const busySlots =
-    freeBusyResponse.data.calendars?.[CALENDAR_ID]?.busy || [];
+  const calendarData = freeBusyResponse.data.calendars?.[CALENDAR_ID];
+
+  // Check for calendar-level errors (e.g. "notFound", no access)
+  if (calendarData?.errors && calendarData.errors.length > 0) {
+    const reasons = calendarData.errors.map((e) => e.reason).join(", ");
+    console.error(`Google Calendar errors for ${CALENDAR_ID}: ${reasons}`);
+    throw new Error(`Calendar access error: ${reasons}. Ensure the calendar is shared with the service account.`);
+  }
+
+  const busySlots = calendarData?.busy || [];
 
   return allSlots.filter((slot) => {
     const slotStart = new Date(slot.start);

@@ -44,9 +44,10 @@ export async function GET(request: NextRequest) {
     const slots = await getAvailableSlots(date);
     return NextResponse.json({ date, slots, demo: !process.env.GOOGLE_CALENDAR_ID });
   } catch (error) {
-    console.error("Error fetching availability:", error);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Error fetching availability:", message, error);
     return NextResponse.json(
-      { error: "Failed to fetch availability." },
+      { error: `Failed to fetch availability: ${message}` },
       { status: 500 }
     );
   }
