@@ -40,9 +40,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error("Error creating booking:", error);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Error creating booking:", message, error);
     return NextResponse.json(
-      { error: "Failed to create booking." },
+      { error: `Failed to create booking: ${message}` },
       { status: 500 }
     );
   }

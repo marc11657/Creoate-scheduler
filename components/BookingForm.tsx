@@ -39,8 +39,8 @@ export default function BookingForm({ selectedDate, selectedSlot, onBook, onBack
     setSubmitting(true);
     try {
       await onBook({ name: name.trim(), email: email.trim(), message: message.trim() || undefined });
-    } catch {
-      setError("Something went wrong. Please try again.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setSubmitting(false);
     }
   }

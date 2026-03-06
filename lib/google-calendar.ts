@@ -198,26 +198,53 @@ export async function createBooking(
 
   const calendar = getCalendarClient();
 
-  const event = await calendar.events.insert({
-    calendarId: CALENDAR_ID,
-    requestBody: {
-      summary,
-      description,
-      start: {
-        dateTime: details.startTime,
-        timeZone: TIMEZONE,
+  // Try with sendUpdates: "all" first to send invites, fall back to "none"
+  // if Google rejects it (common with personal Gmail calendars)
+  let event;
+  try {
+    event = await calendar.events.insert({
+      calendarId: CALENDAR_ID,
+      requestBody: {
+        summary,
+        description,
+        start: {
+          dateTime: details.startTime,
+          timeZone: TIMEZONE,
+        },
+        end: {
+          dateTime: details.endTime,
+          timeZone: TIMEZONE,
+        },
+        attendees: [{ email: details.email }],
+        reminders: {
+          useDefault: true,
+        },
       },
-      end: {
-        dateTime: details.endTime,
-        timeZone: TIMEZONE,
+      sendUpdates: "all",
+    });
+  } catch {
+    // Retry without sending updates — event still gets created
+    event = await calendar.events.insert({
+      calendarId: CALENDAR_ID,
+      requestBody: {
+        summary,
+        description,
+        start: {
+          dateTime: details.startTime,
+          timeZone: TIMEZONE,
+        },
+        end: {
+          dateTime: details.endTime,
+          timeZone: TIMEZONE,
+        },
+        attendees: [{ email: details.email }],
+        reminders: {
+          useDefault: true,
+        },
       },
-      attendees: [{ email: details.email }],
-      reminders: {
-        useDefault: true,
-      },
-    },
-    sendUpdates: "all",
-  });
+      sendUpdates: "none",
+    });
+  }
 
   return {
     success: true,
