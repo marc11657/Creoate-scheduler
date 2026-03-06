@@ -112,12 +112,13 @@ export async function getAvailableSlots(dateStr: string): Promise<TimeSlot[]> {
   const calendar = getCalendarClient();
   const allSlots = generateBusinessHourSlots(dateStr);
 
-  // Use the configured timezone for the query window, not UTC
-  const timeMin = `${dateStr}T00:00:00`;
+  // Query the full day in UTC — the free/busy response returns absolute times
+  // so the overlap check works correctly regardless of timezone
+  const timeMin = `${dateStr}T00:00:00Z`;
   const nextDay = new Date(`${dateStr}T12:00:00Z`);
   nextDay.setDate(nextDay.getDate() + 1);
   const nextDayStr = nextDay.toISOString().split("T")[0];
-  const timeMax = `${nextDayStr}T00:00:00`;
+  const timeMax = `${nextDayStr}T23:59:59Z`;
 
   const freeBusyResponse = await calendar.freebusy.query({
     requestBody: {
