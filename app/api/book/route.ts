@@ -39,19 +39,27 @@ export async function POST(request: NextRequest) {
       message: message || undefined,
     });
 
-    // Send confirmation email (non-blocking — don't fail the booking if email fails)
-    sendBookingConfirmation({
-      to: email,
-      name,
-      date: startTime.split("T")[0],
-      startTime,
-      endTime,
-      summary: result.summary,
-      meetLink: result.meetLink,
-      message: message || undefined,
-    }).catch((err) => console.error("Failed to send confirmation email:", err));
+    // Send confirmation email — await it so we can report status
+    let emailSent = false;
+    let emailError: string | undefined;
+    try {
+      await sendBookingConfirmation({
+        to: email,
+        name,
+        date: startTime.split("T")[0],
+        startTime,
+        endTime,
+        summary: result.summary,
+        meetLink: result.meetLink,
+        message: message || undefined,
+      });
+      emailSent = true;
+    } catch (err) {
+      emailError = err instanceof Error ? err.message : String(err);
+      console.error("Failed to send confirmation email:", emailError);
+    }
 
-    return NextResponse.json(result);
+    return NextResponse.json({ ...result, emailSent, emailError });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("Error creating booking:", message, error);

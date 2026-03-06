@@ -30,9 +30,10 @@ function formatDateTime(isoString: string): string {
 export async function sendBookingConfirmation(details: EmailDetails): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    console.warn("RESEND_API_KEY not set — skipping confirmation email");
-    return;
+    throw new Error("RESEND_API_KEY is not set — cannot send email");
   }
+
+  console.log(`Sending confirmation email to ${details.to} via Resend...`);
 
   const resend = new Resend(apiKey);
   const fromAddress = process.env.RESEND_FROM || "onboarding@resend.dev";
