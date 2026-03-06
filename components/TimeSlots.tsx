@@ -5,16 +5,26 @@ import { TimeSlot } from "@/lib/google-calendar";
 interface TimeSlotsProps {
   slots: TimeSlot[];
   loading: boolean;
+  error?: string | null;
   selectedSlot: TimeSlot | null;
   onSelectSlot: (slot: TimeSlot) => void;
 }
 
-export default function TimeSlots({ slots, loading, selectedSlot, onSelectSlot }: TimeSlotsProps) {
+export default function TimeSlots({ slots, loading, error, selectedSlot, onSelectSlot }: TimeSlotsProps) {
   if (loading) {
     return (
       <div className="flex flex-col items-center py-12">
         <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
         <p className="text-sm text-gray-500 mt-3">Checking availability...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-600 font-medium">Something went wrong</p>
+        <p className="text-sm text-red-400 mt-1">{error}</p>
       </div>
     );
   }

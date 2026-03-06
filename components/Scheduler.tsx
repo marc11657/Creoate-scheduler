@@ -23,20 +23,25 @@ export default function Scheduler() {
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [bookingResult, setBookingResult] = useState<BookingResult | null>(null);
 
   const fetchSlots = useCallback(async (date: string) => {
     setLoading(true);
     setSlots([]);
     setSelectedSlot(null);
+    setError(null);
     try {
       const res = await fetch(`/api/availability?date=${date}`);
       const data = await res.json();
-      if (data.slots) {
+      if (!res.ok) {
+        setError(data.error || "Failed to fetch availability");
+      } else if (data.slots) {
         setSlots(data.slots);
       }
     } catch (err) {
       console.error("Failed to fetch slots:", err);
+      setError("Network error fetching availability");
     } finally {
       setLoading(false);
     }
@@ -118,6 +123,7 @@ export default function Scheduler() {
         <TimeSlots
           slots={slots}
           loading={loading}
+          error={error}
           selectedSlot={selectedSlot}
           onSelectSlot={handleSlotSelect}
         />
