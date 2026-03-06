@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createBooking } from "@/lib/google-calendar";
+import { sendBookingConfirmation } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   let body;
@@ -37,6 +38,18 @@ export async function POST(request: NextRequest) {
       email,
       message: message || undefined,
     });
+
+    // Send confirmation email (non-blocking — don't fail the booking if email fails)
+    sendBookingConfirmation({
+      to: email,
+      name,
+      date: startTime.split("T")[0],
+      startTime,
+      endTime,
+      summary: result.summary,
+      meetLink: result.meetLink,
+      message: message || undefined,
+    }).catch((err) => console.error("Failed to send confirmation email:", err));
 
     return NextResponse.json(result);
   } catch (error) {

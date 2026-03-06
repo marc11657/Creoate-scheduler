@@ -210,7 +210,6 @@ export async function createBooking(
   // without attendees — the interviewer info is in the description.
   const event = await calendar.events.insert({
     calendarId: CALENDAR_ID,
-    conferenceDataVersion: 1,
     requestBody: {
       summary,
       description,
@@ -221,12 +220,6 @@ export async function createBooking(
       end: {
         dateTime: details.endTime,
         timeZone: TIMEZONE,
-      },
-      conferenceData: {
-        createRequest: {
-          requestId: `creoate-${Date.now()}`,
-          conferenceSolutionKey: { type: "hangoutsMeet" },
-        },
       },
       reminders: {
         useDefault: true,
@@ -241,6 +234,6 @@ export async function createBooking(
     start: details.startTime,
     end: details.endTime,
     attendeeEmail: details.email,
-    meetLink: event.data.conferenceData?.entryPoints?.[0]?.uri || undefined,
+    meetLink: event.data.hangoutLink || undefined,
   };
 }
