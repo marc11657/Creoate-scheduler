@@ -205,27 +205,48 @@ export async function createBooking(
 
   const calendar = getCalendarClient();
 
-  // Service accounts on personal Gmail cannot add attendees (requires
-  // domain-wide delegation which is Workspace-only). Create the event
-  // without attendees — the interviewer info is in the description.
-  const event = await calendar.events.insert({
-    calendarId: CALENDAR_ID,
-    requestBody: {
-      summary,
-      description,
-      start: {
-        dateTime: details.startTime,
-        timeZone: TIMEZONE,
-      },
-      end: {
-        dateTime: details.endTime,
-        timeZone: TIMEZONE,
-      },
-      reminders: {
-        useDefault: true,
-      },
+  // Use a configured meeting link (Google Meet personal room, Zoom, etc.)
+  // since service accounts on personal Gmail cannot auto-generate Meet links.
+  const meetLink = process.env.MEETING_LINK || undefined;
+
+  const eventBody: Record<string, unknown> = {
+    summary,
+    description: meetLink
+      ? `${description}\n\nJoin video call: ${meetLink}`
+      : description,
+    location: meetLink || undefined,
+    start: {
+      dateTime: details.startTime,
+      timeZone: TIMEZONE,
     },
-  });
+    end: {
+      dateTime: details.endTime,
+      timeZone: TIMEZONE,
+    },
+    attendees: [{ email: details.email, displayName: details.name }],
+    reminders: {
+      useDefault: true,
+    },
+  };
+
+  let event;
+  try {
+    // Try with attendees + sendUpdates so Google sends the invite email
+    event = await calendar.events.insert({
+      calendarId: CALENDAR_ID,
+      sendUpdates: "all",
+      requestBody: eventBody,
+    });
+  } catch (err) {
+    // If attendees fail (common with service accounts on personal Gmail),
+    // fall back to creating the event without attendees.
+    console.warn("Could not add attendees, creating event without them:", err);
+    delete eventBody.attendees;
+    event = await calendar.events.insert({
+      calendarId: CALENDAR_ID,
+      requestBody: eventBody,
+    });
+  }
 
   return {
     success: true,
@@ -234,6 +255,6 @@ export async function createBooking(
     start: details.startTime,
     end: details.endTime,
     attendeeEmail: details.email,
-    meetLink: event.data.hangoutLink || undefined,
+    meetLink,
   };
 }
