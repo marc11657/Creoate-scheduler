@@ -6,20 +6,23 @@ interface CalendarPickerProps {
 }
 
 export default function CalendarPicker({ selectedDate, onSelectDate }: CalendarPickerProps) {
-  const days: { date: string; dayName: string; dayNum: number; monthShort: string; isWeekend: boolean; isToday: boolean }[] = [];
+  const days: { date: string; dayName: string; dayNum: number; monthShort: string; isToday: boolean }[] = [];
 
-  for (let i = 0; i < 14; i++) {
+  let i = 0;
+  while (days.length < 10) {
     const d = new Date();
     d.setDate(d.getDate() + i);
+    i++;
+    const dayOfWeek = d.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) continue; // Skip weekends
+
     const dateStr = d.toISOString().split("T")[0];
     const dayName = d.toLocaleDateString("en-GB", { weekday: "short" });
     const dayNum = d.getDate();
     const monthShort = d.toLocaleDateString("en-GB", { month: "short" });
-    const dayOfWeek = d.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    const isToday = i === 0;
+    const isToday = i === 1;
 
-    days.push({ date: dateStr, dayName, dayNum, monthShort, isWeekend, isToday });
+    days.push({ date: dateStr, dayName, dayNum, monthShort, isToday });
   }
 
   return (
@@ -27,7 +30,7 @@ export default function CalendarPicker({ selectedDate, onSelectDate }: CalendarP
       <h3 className="text-sm font-medium text-gray-500 mb-3 uppercase tracking-wider">
         Select a date
       </h3>
-      <div className="grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-5 gap-2">
         {days.map((day) => {
           const isSelected = selectedDate === day.date;
           return (
@@ -40,7 +43,6 @@ export default function CalendarPicker({ selectedDate, onSelectDate }: CalendarP
                   ? "border-primary bg-primary/5 shadow-sm"
                   : "border-transparent bg-white hover:border-primary/30 hover:shadow-sm"
                 }
-                ${day.isWeekend ? "opacity-60" : ""}
               `}
             >
               <span className={`text-[10px] uppercase font-medium ${isSelected ? "text-primary" : "text-gray-400"}`}>

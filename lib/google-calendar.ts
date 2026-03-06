@@ -61,29 +61,35 @@ export interface TimeSlot {
   display: string;
 }
 
+const SLOT_DURATION_MINUTES = 45;
+
 function generateBusinessHourSlots(dateStr: string): TimeSlot[] {
   const slots: TimeSlot[] = [];
   const startHour = 9;
-  const endHour = 18;
+  const endHour = 21;
 
-  for (let hour = startHour; hour < endHour; hour++) {
-    for (const minute of [0, 30]) {
-      const start = new Date(`${dateStr}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00`);
-      const end = new Date(start.getTime() + 30 * 60 * 1000);
+  // Skip weekends (Mon=1 ... Fri=5)
+  const dayOfWeek = new Date(`${dateStr}T12:00:00Z`).getUTCDay();
+  if (dayOfWeek === 0 || dayOfWeek === 6) return slots;
 
-      const display = start.toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-        timeZone: TIMEZONE,
-      });
+  for (let minutes = startHour * 60; minutes + SLOT_DURATION_MINUTES <= endHour * 60; minutes += SLOT_DURATION_MINUTES) {
+    const hour = Math.floor(minutes / 60);
+    const minute = minutes % 60;
+    const start = new Date(`${dateStr}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00`);
+    const end = new Date(start.getTime() + SLOT_DURATION_MINUTES * 60 * 1000);
 
-      slots.push({
-        start: start.toISOString(),
-        end: end.toISOString(),
-        display,
-      });
-    }
+    const display = start.toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: TIMEZONE,
+    });
+
+    slots.push({
+      start: start.toISOString(),
+      end: end.toISOString(),
+      display,
+    });
   }
   return slots;
 }
@@ -169,6 +175,7 @@ export interface BookingResult {
   start: string;
   end: string;
   attendeeEmail: string;
+  meetLink?: string;
   demo?: boolean;
 }
 
@@ -203,6 +210,7 @@ export async function createBooking(
   // without attendees — the interviewer info is in the description.
   const event = await calendar.events.insert({
     calendarId: CALENDAR_ID,
+    conferenceDataVersion: 1,
     requestBody: {
       summary,
       description,
@@ -213,6 +221,12 @@ export async function createBooking(
       end: {
         dateTime: details.endTime,
         timeZone: TIMEZONE,
+      },
+      conferenceData: {
+        createRequest: {
+          requestId: `creoate-${Date.now()}`,
+          conferenceSolutionKey: { type: "hangoutsMeet" },
+        },
       },
       reminders: {
         useDefault: true,
@@ -227,5 +241,6 @@ export async function createBooking(
     start: details.startTime,
     end: details.endTime,
     attendeeEmail: details.email,
+    meetLink: event.data.conferenceData?.entryPoints?.[0]?.uri || undefined,
   };
 }

@@ -14,6 +14,10 @@ interface BookingResult {
   email: string;
   date: string;
   time: string;
+  startTime: string;
+  endTime: string;
+  meetLink?: string;
+  summary: string;
   demo?: boolean;
 }
 
@@ -84,6 +88,10 @@ export default function Scheduler() {
       email: data.email,
       date: selectedDate,
       time: selectedSlot.display,
+      startTime: selectedSlot.start,
+      endTime: selectedSlot.end,
+      meetLink: result.meetLink,
+      summary: result.summary || `Interview with ${data.name} — Creoate`,
       demo: result.demo,
     });
     setState("confirmed");
@@ -105,6 +113,10 @@ export default function Scheduler() {
           email={bookingResult.email}
           date={bookingResult.date}
           time={bookingResult.time}
+          startTime={bookingResult.startTime}
+          endTime={bookingResult.endTime}
+          meetLink={bookingResult.meetLink}
+          summary={bookingResult.summary}
           demo={bookingResult.demo}
           onReset={handleReset}
         />
