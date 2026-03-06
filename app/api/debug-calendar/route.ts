@@ -1,6 +1,19 @@
 import { NextResponse } from "next/server";
 import { google } from "googleapis";
 
+function parsePrivateKey(raw: string): string {
+  let key = raw.replace(/^["']|["']$/g, "").replace(/\\n/g, "\n");
+  if (!key.includes("\n")) {
+    const base64 = key
+      .replace("-----BEGIN PRIVATE KEY-----", "")
+      .replace("-----END PRIVATE KEY-----", "")
+      .replace(/\s/g, "");
+    const lines = base64.match(/.{1,64}/g) || [];
+    key = ["-----BEGIN PRIVATE KEY-----", ...lines, "-----END PRIVATE KEY-----", ""].join("\n");
+  }
+  return key;
+}
+
 export async function GET() {
   const diagnostics: Record<string, unknown> = {};
 
@@ -17,18 +30,18 @@ export async function GET() {
     GOOGLE_CALENDAR_ID: calendarId || "MISSING",
   };
 
-  // 2. Check private key format
-  const key = rawKey?.replace(/\\n/g, "\n");
-  diagnostics.keyFormat = {
-    hasBeginMarker: key?.includes("-----BEGIN PRIVATE KEY-----") ?? false,
-    hasEndMarker: key?.includes("-----END PRIVATE KEY-----") ?? false,
-    containsRealNewlines: key?.includes("\n") ?? false,
-    lineCount: key?.split("\n").length ?? 0,
-  };
-
   if (!email || !rawKey || !calendarId) {
     return NextResponse.json({ diagnostics, error: "Missing env vars" });
   }
+
+  // 2. Parse key and check format
+  const key = parsePrivateKey(rawKey);
+  diagnostics.keyFormat = {
+    hasBeginMarker: key.includes("-----BEGIN PRIVATE KEY-----"),
+    hasEndMarker: key.includes("-----END PRIVATE KEY-----"),
+    containsRealNewlines: key.includes("\n"),
+    lineCount: key.split("\n").length,
+  };
 
   // 3. Try to authenticate
   try {

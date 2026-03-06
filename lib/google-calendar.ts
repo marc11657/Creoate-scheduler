@@ -17,10 +17,39 @@ function isConfigured(): boolean {
   );
 }
 
+function parsePrivateKey(raw: string): string {
+  // Handle all common env var formats:
+  // 1. Literal \n (from .env files): replace with real newlines
+  // 2. Already has real newlines: leave as-is
+  // 3. Wrapped in extra quotes: strip them
+  let key = raw.replace(/^["']|["']$/g, "").replace(/\\n/g, "\n");
+
+  // If the key still doesn't have proper PEM line breaks, try to reconstruct
+  if (!key.includes("\n")) {
+    // The key is one long string — split into PEM format
+    const base64 = key
+      .replace("-----BEGIN PRIVATE KEY-----", "")
+      .replace("-----END PRIVATE KEY-----", "")
+      .replace(/\s/g, "");
+    const lines = base64.match(/.{1,64}/g) || [];
+    key = [
+      "-----BEGIN PRIVATE KEY-----",
+      ...lines,
+      "-----END PRIVATE KEY-----",
+      "",
+    ].join("\n");
+  }
+
+  return key;
+}
+
 function getCalendarClient() {
+  const rawKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
+  if (!rawKey) throw new Error("GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY is not set");
+
   const auth = new google.auth.JWT({
     email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    key: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+    key: parsePrivateKey(rawKey),
     scopes: SCOPES,
   });
   return google.calendar({ version: "v3", auth });
